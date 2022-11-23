@@ -135,7 +135,7 @@ class PostViewTests(TestCase):
                                     kwargs={'post_id': self.post.id}),
                                     data={
                                         'text': 'тестовый комментарий'}
-                                    ) 
+                                    )
         self.authorized_client.logout()
         self.authorized_client.post(reverse('posts:add_comment',
                                     kwargs={'post_id': self.post.id}),
