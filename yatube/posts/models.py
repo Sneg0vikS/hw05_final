@@ -68,7 +68,7 @@ class Comment(models.Model):
         ordering = ('-created',)
 
     def __str__(self):
-        return self.text
+        return self.text[:30]
 
 
 class Follow(models.Model):
