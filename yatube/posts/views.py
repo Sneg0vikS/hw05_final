@@ -119,10 +119,12 @@ def paginator_page(request, posts):
 @login_required
 def follow_index(request):
     """Отображение постов фоловера"""
+    title = '123'
     posts = Post.objects.filter(author__following__user=request.user)
     page_obj = paginator_page(request, posts)
     context = {
         'page_obj': page_obj,
+        'title': title,
     }
     return render(request, 'posts/follow.html', context)
 

@@ -47,6 +47,9 @@ class Post(models.Model):
         """выводим текст поста"""
         return self.text[:15]
 
+    def str_author(self) -> str:
+        return self.author
+
 
 class Comment(models.Model):
     """Класс описывающий модель комментария"""
