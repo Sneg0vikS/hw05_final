@@ -8,7 +8,11 @@
     <h4>Всего постов: {{ author.posts.count }}</h4>
     <h4>Всего подписчиков: {{ author.following.count }}</h4>
     <h4>Всего комментариев к постам: {{ user.comments.count }}</h4>
-    <h4>Подписок у автора на других: {{ author.follower.count }}</h4>
+    {% if user.is_authenticated and a %}
+
+    {% else %}
+      <p>Зарегестрируйтесь чтобы подписаться.</p>
+    {% endif %}
     {% if following %}
       <a
         class="btn btn-lg btn-light"
