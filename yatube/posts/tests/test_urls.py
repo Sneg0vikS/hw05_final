@@ -11,7 +11,6 @@ LOGIN_URL = reverse("users:login")
 NEXT = "?next="
 FOLLOW_INDEX_URL = reverse("posts:follow_index")
 PASSWORD_CHANGE_URL = reverse("users:password_change_form")
-PROFILE_URL = reverse('posts:profile')
 
 
 class PostURLTests(TestCase):
@@ -86,7 +85,6 @@ class PostURLTests(TestCase):
         templates_url_names = {
             INDEX_URL: 'posts/index.html',
             self.GROUP_SLUG_URL: 'posts/group_list.html',
-            PROFILE_URL: 'posts/profile.html',
             self.POST_URL: 'posts/post_detail.html',
             CREATE_URL: 'posts/post_create_.html',
             self.POST_EDIT_URL: 'posts/post_create_.html',

@@ -24,7 +24,7 @@ class Group(models.Model):
 class Post(models.Model):
     """Класс описывающий модель поста"""
 
-    text = models.TextField(_("Text"))
+    text = models.TextField(_("Текст"))
     pub_date = models.DateTimeField(_("Date of publication"),
                                     auto_now_add=True)
     author = models.ForeignKey(
@@ -41,7 +41,7 @@ class Post(models.Model):
         related_name="posts",
         verbose_name=_("Group"),
     )
-    image = models.ImageField(_("Image"), upload_to="posts/", blank=True)
+    image = models.ImageField(_("Изображение"), upload_to="posts/", blank=True)
 
     class Meta:
         """Указываем необходимую сортировку и название модели"""
@@ -72,7 +72,7 @@ class Comment(models.Model):
         related_name="comments",
         verbose_name=_("Author"),
     )
-    text = models.TextField(_("Text"))
+    text = models.TextField(_("Текст"))
     created = models.DateTimeField(_("Created"), auto_now_add=True)
 
     class Meta:
