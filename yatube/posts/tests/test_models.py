@@ -5,6 +5,7 @@ from ..models import Group, Post, User, Comment, Follow
 
 translation.activate("en")
 
+
 class PostModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -128,8 +129,10 @@ class FollowModelTest(TestCase):
         cls.AUTHOR_USERNAME = "author"
         cls.SUBSCRIBER_USERNAME = "sub"
 
-        cls.user_author = User.objects.create_user(username=cls.AUTHOR_USERNAME)
-        cls.user_sub = User.objects.create_user(username=cls.SUBSCRIBER_USERNAME)
+        cls.user_author = User.objects.create_user(
+            username=cls.AUTHOR_USERNAME)
+        cls.user_sub = User.objects.create_user(
+            username=cls.SUBSCRIBER_USERNAME)
 
     def test_model_creation(self):
         Follow.objects.create(

@@ -138,11 +138,11 @@ class FormsTests(TestCase):
             "group": self.group.pk,
             "image": self.uploaded.open(),
         }
-        response = self.authorized_client2.post(
-            self.POST_EDIT_URL,
-            data=form_data,
-            follow=True,
-        )
+        # response = self.authorized_client2.post(
+        #    self.POST_EDIT_URL,
+        #    data=form_data,
+        #    follow=True,
+        # )
         self.assertFalse(
             Post.objects.filter(
                 text=form_data["text"],
