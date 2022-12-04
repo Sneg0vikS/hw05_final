@@ -25,7 +25,8 @@ class Post(models.Model):
     """Класс описывающий модель поста"""
 
     text = models.TextField(_("Text"))
-    pub_date = models.DateTimeField(_("Date of publication"), auto_now_add=True)
+    pub_date = models.DateTimeField(_("Date of publication"),
+                                    auto_now_add=True)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -101,7 +102,8 @@ class Follow(models.Model):
         verbose_name = _("Following")
         verbose_name_plural = _("Followings")
         constraints = (
-            models.UniqueConstraint(fields=("user", "author"), name="One follow for each"),
+            models.UniqueConstraint(fields=("user", "author"),
+                                    name="One follow for each"),
             models.CheckConstraint(
                 check=~Q(author=F('user')),
                 name='author_and_user_can_not_be_equal'

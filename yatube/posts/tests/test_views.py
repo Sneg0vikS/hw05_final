@@ -33,9 +33,10 @@ class PostViewTests(TestCase):
             name="small.gif", content=SMALL_GIF, content_type="image/gif"
         )
         cls.user = User.objects.create_user(username=USERNAME)
-        cls.user2 = User.objects.create_user(username=USERNAME+"2")
+        cls.user2 = User.objects.create_user(username=USERNAME + "2")
         cls.group = Group.objects.create(
-            title="Тестовая группа", slug=GROUP_SLUG, description="Тестовое описание"
+            title="Тестовая группа", slug=GROUP_SLUG,
+            description="Тестовое описание"
         )
         cls.group2 = Group.objects.create(
             title="Тестовая группа #2",
@@ -51,7 +52,8 @@ class PostViewTests(TestCase):
         cls.authorized_client2 = Client()
         cls.authorized_client2.force_login(cls.user2)
 
-        cls.POST_EDIT_URL = reverse("posts:post_edit", kwargs={"post_id": cls.post.pk})
+        cls.POST_EDIT_URL = reverse("posts:post_edit", kwargs={"post_id":
+                                                               cls.post.pk})
         cls.POST_DETAIL_URL = reverse(
             "posts:post_detail", kwargs={"post_id": cls.post.pk}
         )
@@ -62,7 +64,8 @@ class PostViewTests(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_pages_show_correct_context(self):
-        """Шаблоны index, group_list, profile сформированы с правильным контекстом."""
+        """Шаблоны index, group_list, profile сформированы с
+         правильным контекстом."""
         url_list = (
             (INDEX_URL, self.authorized_client),
             (GROUP_URL, self.authorized_client),
@@ -150,7 +153,8 @@ class PaginatorViewsTest(TestCase):
                 response = client.get(url)
                 self.assertEqual(response.status_code, 200)
                 # Проверка: количество постов на первой странице равно 10.
-                self.assertEqual(len(response.context["page_obj"]), POSTS_PER_PAGE)
+                self.assertEqual(len(response.context["page_obj"]),
+                                 POSTS_PER_PAGE)
                 # Проверка: на второй странице должен быть один пост.
                 response = client.get(url + "?page=2")
                 self.assertEqual(
@@ -166,7 +170,8 @@ class FollowViewsTest(TestCase):
         cls.first_user = User.objects.create_user(username="first_user")
         cls.second_user = User.objects.create_user(username="second_user")
         cls.third_user = User.objects.create_user(username="third_user")
-        cls.post = Post.objects.create(text="Тестовый пост", author=cls.second_user)
+        cls.post = Post.objects.create(text="Тестовый пост",
+                                       author=cls.second_user)
 
         cls.authorized_client_1 = Client()
         cls.authorized_client_2 = Client()
@@ -202,9 +207,11 @@ class FollowViewsTest(TestCase):
         )
 
     def test_subscribe_to_other_users_not_authorized_client(self):
-        """Неавторизованный пользователь не может подписаться на автора поста."""
+        """Неавторизованный пользователь не может подписаться на
+        автора поста."""
         self.client.get(self.FOLLOW_SECOND_USER_URL)
-        self.assertFalse(self.second_user.following.filter(user=self.first_user).exists())
+        self.assertFalse(self.second_user.following.filter(
+            user=self.first_user).exists())
 
     def test_follow_index(self):
         """Новая запись пользователя появляется в ленте тех,
