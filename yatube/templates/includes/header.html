@@ -29,7 +29,7 @@
               href="{% url 'users:logout' %}">Выйти</a>
           </li>
           <li>
-            <a Пользователь: href="{% url 'posts:profile' user.username %}">{{user.username}}</a>
+            Пользователь: <a href="{% url 'posts:profile' user.username %}">{{user.username}}</a>
           </li>
         {% else %}
         <li class="nav-item"> 

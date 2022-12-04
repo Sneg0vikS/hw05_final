@@ -6,11 +6,11 @@
     <div class="col-md-8 p-5">
       <div class="card">
         <div class="card-header">
-          {% if is_edit %} Редактирование записи {% else %} Добавление записи {% endif %}
+          {% if post %} Редактирование записи {% else %} Добавление записи {% endif %}
         </div>
         <div class="card-body">
           <form method="post" enctype="multipart/form-data"
-            {% if is_edit %}
+            {% if post %}
               action="{% url 'posts:post_edit' post.pk %}">
             {% else %}
               action="{% url 'posts:post_create' %}">
@@ -30,11 +30,17 @@
                         {{ field.help_text|safe }}
                       </small>
                     {% endif %}
+                    {% if field.errors %}
+                      <small id="{{ field.id_for_label }}-error" class="form-text text-danger">
+                        {{ field.errors.as_text|safe }}
+                      </small>
+                    {% endif %}
+
                   </div>
                 {% endfor %}
                 <div class="d-flex justify-content-end">
                   <button type="submit" class="btn btn-primary">
-                    {% if is_edit %} Сохранить {% else %} Добавить {% endif %}  
+                    {% if post %} Сохранить {% else %} Добавить {% endif %}
                   </button>
                 </div>
           </form>

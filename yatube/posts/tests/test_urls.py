@@ -1,11 +1,16 @@
 from http import HTTPStatus
 
-from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
+from django.urls import reverse
 
-from posts.models import Group, Post, User
+from ..models import Group, Post, User
 
-User = get_user_model()
+INDEX_URL = reverse("posts:index")
+CREATE_URL = reverse("posts:post_create")
+LOGIN_URL = reverse("users:login")
+NEXT = "?next="
+FOLLOW_INDEX_URL = reverse("posts:follow_index")
+PASSWORD_CHANGE_URL = reverse("users:password_change_form")
 
 
 class PostURLTests(TestCase):
@@ -22,75 +27,68 @@ class PostURLTests(TestCase):
             text='Тестовый пост',
             group=cls.group)
 
-    def setUp(self):
-        self.guest_client = self.client
-        self.user = PostURLTests.user
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
 
-    # если я правильно понял то в ревью замечание сделать надо было так?
-    def test_guest_urls_access(self):
+        cls.GROUP_SLUG_URL = reverse("posts:group_list", args=[cls.group.slug])
+        cls.PROFILE_URL = reverse("posts:profile", args=[cls.user.username])
+        cls.POST_URL = reverse("posts:post_detail", args=[cls.post.id])
+        cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
+        cls.COMMENT_ADD_URL = reverse("posts:add_comment", args=[cls.post.id])
+        cls.FOLLOW_PROFILE_URL = reverse("posts:profile_follow", args=[cls.user.username])
+        cls.UNFOLLOW_PROFILE_URL = reverse("posts:profile_unfollow", args=[cls.user.username])
+
+    def test_urls_access(self):
         """Страницы доступные всем пользователям"""
-        url_names = (
-            '/',
-            f'/group/{self.group.slug}/',
-            '/profile/auth/',
-            f'/posts/{self.post.id}/',
+        url_cases = (
+            (INDEX_URL, self.client),
+            (self.GROUP_SLUG_URL, self.client),
+            (self.PROFILE_URL, self.client),
+            (self.POST_URL, self.client),
+            (CREATE_URL, self.authorized_client),
         )
-        for url_name in url_names:
-            with self.subTest(url_name=url_name):
-                response = self.client.get(url_name)
-                error_acces = f'url {url_name}, не доступен'
+        for url_case in url_cases:
+            with self.subTest(url_case=url_case):
+                response = url_case[1].get(url_case[0])
+                error_text = f'url {url_case[0]} не доступен'
                 self.assertEqual(
                     response.status_code,
                     HTTPStatus.OK,
-                    error_acces
-                )
-
-    def test_autorized_client_urls_access(self):
-        """Страницы доступные авторизированному пользователю"""
-        url_names = (
-            '/',
-            '/create/',
-            f'/group/{self.group.slug}/',
-            '/profile/auth/',
-            f'/posts/{self.post.id}/',
-        )
-        for url_name in url_names:
-            with self.subTest(url_name=url_name):
-                response = self.authorized_client.get(url_name)
-                error_acces = f'url {url_name}, не доступен'
-                self.assertEqual(
-                    response.status_code,
-                    HTTPStatus.OK,
-                    error_acces
+                    error_text
                 )
 
     def test_unexisting_page_url(self):
-        response = self.guest_client.get('/unexisting_page/')
+        response = self.client.get('/unexisting_page/')
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_redirects_anonymous_on_admin_login(self):
         """Редирект неавторизованного пользователя"""
-        test_redirect = {
-            '/create/': '/auth/login/?next=/create/',
-            f'/posts/{self.post.id}/edit/':
-                f'/auth/login/?next=/posts/{self.post.id}/edit/'}
-        for urls, redirect_url in test_redirect.items():
-            with self.subTest(urls=urls):
-                response = self.guest_client.get(urls)
+        test_redirects = (
+            CREATE_URL,
+            self.POST_EDIT_URL,
+            self.COMMENT_ADD_URL,
+            FOLLOW_INDEX_URL,
+            self.FOLLOW_PROFILE_URL,
+            self.UNFOLLOW_PROFILE_URL,
+            PASSWORD_CHANGE_URL,
+        )
+        for url in test_redirects:
+            redirect_url = LOGIN_URL + NEXT + url
+            with self.subTest(url=url):
+                response = self.client.get(url)
                 self.assertRedirects(response, redirect_url)
 
     def post_urls_uses_correct_template(self):
         """URL-адрес использует соответствующий шаблон."""
         templates_url_names = {
-            '/': 'posts/index.html',
-            f'/group/{self.group.slug}/': 'posts/group_list.html',
-            '/profile/auth/': 'posts/profile.html',
-            f'/posts/{self.post.id}/': 'posts/post_detail.html',
-            '/create/': 'posts/post_create_.html',
-            f'/posts/{self.post.id}/edit/': 'posts/post_create_.html'}
+            INDEX_URL: 'posts/index.html',
+            self.GROUP_SLUG_URL: 'posts/group_list.html',
+            PROFILE_URL: 'posts/profile.html',
+            self.POST_URL: 'posts/post_detail.html',
+            CREATE_URL: 'posts/post_create_.html',
+            self.POST_EDIT_URL: 'posts/post_create_.html',
+            FOLLOW_INDEX_URL: 'posts/follow.html',
+        }
         for address, template in templates_url_names.items():
             with self.subTest(template=template):
-                response = self.authorized_client.get(address)
-                self.assertTemplateUsed(response, template)
+                self.assertTemplateUsed(self.authorized_client.get(address), template)
