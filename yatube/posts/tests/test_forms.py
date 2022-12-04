@@ -38,7 +38,8 @@ class FormsTests(TestCase):
         cls.user = User.objects.create_user(username=USERNAME)
         cls.user2 = User.objects.create_user(username="user2")
         cls.group = Group.objects.create(
-            title="Тестовая группа", slug="test-slug", description=TEST_DESCRIPTION
+            title="Тестовая группа", slug="test-slug",
+            description=TEST_DESCRIPTION
         )
         cls.group2 = Group.objects.create(
             title="Тестовая группа №2",
@@ -46,7 +47,8 @@ class FormsTests(TestCase):
             description=TEST_DESCRIPTION,
         )
         cls.post = Post.objects.create(
-            author=cls.user, text=POST_TEXT, group=cls.group, image=cls.uploaded
+            author=cls.user, text=POST_TEXT, group=cls.group,
+            image=cls.uploaded
         )
 
         cls.authorized_client = Client()
@@ -57,7 +59,8 @@ class FormsTests(TestCase):
         cls.POST_DETAIL_URL = reverse(
             "posts:post_detail", kwargs={"post_id": cls.post.pk}
         )
-        cls.POST_EDIT_URL = reverse("posts:post_edit", kwargs={"post_id": cls.post.pk})
+        cls.POST_EDIT_URL = reverse("posts:post_edit",
+                                    kwargs={"post_id": cls.post.pk})
 
     def test_create_post(self):
         """Валидная форма создает запись в Post."""
@@ -92,7 +95,8 @@ class FormsTests(TestCase):
 
         # проверяем картинку
         self.assertEqual(
-            new_posts.first().image.open().read(), form_data["image"].open().read()
+            new_posts.first().image.open().read(),
+            form_data["image"].open().read()
         )
 
         self.assertEqual(response.status_code, 200)
@@ -102,7 +106,8 @@ class FormsTests(TestCase):
         form_data = {
             "text": "",
         }
-        self.authorized_client.post(POST_CREATE_URL, data=form_data, follow=True)
+        self.authorized_client.post(POST_CREATE_URL, data=form_data,
+                                    follow=True)
         self.assertFalse(Post.objects.filter(text=form_data["text"]).exists())
 
     def test_post_edit(self):
@@ -123,7 +128,8 @@ class FormsTests(TestCase):
                 text=form_data["text"],
             ).exists()
         )
-        self.assertEqual(Post.objects.get(pk=self.post.pk).text, form_data["text"])
+        self.assertEqual(Post.objects.get(pk=self.post.pk).text,
+                         form_data["text"])
 
     def test_post_edit_other_user(self):
         """Другой пользователь не может редактировать запись в Post."""
@@ -241,5 +247,6 @@ class CommentCreateFormTests(TestCase):
         )
         self.assertRedirects(response, self.POST_DETAIL_URL)
         self.assertTrue(
-            Comment.objects.filter(post=self.post, text=form_data["text"]).exists()
+            Comment.objects.filter(post=self.post,
+                                   text=form_data["text"]).exists()
         )

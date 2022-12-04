@@ -11,6 +11,7 @@ LOGIN_URL = reverse("users:login")
 NEXT = "?next="
 FOLLOW_INDEX_URL = reverse("posts:follow_index")
 PASSWORD_CHANGE_URL = reverse("users:password_change_form")
+PROFILE_URL = reverse('posts:profile')
 
 
 class PostURLTests(TestCase):
@@ -35,8 +36,10 @@ class PostURLTests(TestCase):
         cls.POST_URL = reverse("posts:post_detail", args=[cls.post.id])
         cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
         cls.COMMENT_ADD_URL = reverse("posts:add_comment", args=[cls.post.id])
-        cls.FOLLOW_PROFILE_URL = reverse("posts:profile_follow", args=[cls.user.username])
-        cls.UNFOLLOW_PROFILE_URL = reverse("posts:profile_unfollow", args=[cls.user.username])
+        cls.FOLLOW_PROFILE_URL = reverse("posts:profile_follow",
+                                         args=[cls.user.username])
+        cls.UNFOLLOW_PROFILE_URL = reverse("posts:profile_unfollow",
+                                           args=[cls.user.username])
 
     def test_urls_access(self):
         """Страницы доступные всем пользователям"""
@@ -91,4 +94,5 @@ class PostURLTests(TestCase):
         }
         for address, template in templates_url_names.items():
             with self.subTest(template=template):
-                self.assertTemplateUsed(self.authorized_client.get(address), template)
+                self.assertTemplateUsed(self.authorized_client.get(address),
+                                        template)
