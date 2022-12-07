@@ -24,7 +24,7 @@ class Group(models.Model):
 class Post(models.Model):
     """Класс описывающий модель поста"""
 
-    text = models.TextField(_("Текст"))
+    text = models.TextField(_("Text"))
     pub_date = models.DateTimeField(_("Date of publication"),
                                     auto_now_add=True)
     author = models.ForeignKey(
@@ -41,7 +41,7 @@ class Post(models.Model):
         related_name="posts",
         verbose_name=_("Group"),
     )
-    image = models.ImageField(_("Изображение"), upload_to="posts/", blank=True)
+    image = models.ImageField(_("Image"), upload_to="posts/", blank=True)
 
     class Meta:
         """Указываем необходимую сортировку и название модели"""
@@ -54,7 +54,7 @@ class Post(models.Model):
         return self.text[:15]
 
     def str_author(self) -> str:
-        return self.author
+        return str(self.author)
 
 
 class Comment(models.Model):
@@ -72,7 +72,7 @@ class Comment(models.Model):
         related_name="comments",
         verbose_name=_("Author"),
     )
-    text = models.TextField(_("Текст"))
+    text = models.TextField(_("Text"))
     created = models.DateTimeField(_("Created"), auto_now_add=True)
 
     class Meta:
@@ -97,6 +97,9 @@ class Follow(models.Model):
         related_name="following",
         verbose_name=_("Author"),
     )
+
+    def __str__(self):
+        return f"{self.user} subscribed to {self.author}"
 
     class Meta:
         verbose_name = _("Following")

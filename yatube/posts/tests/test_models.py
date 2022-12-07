@@ -1,11 +1,10 @@
-from django.test import TestCase
-from django.utils import translation
+from django.db import IntegrityError
+from django.test import TestCase, override_settings
 
 from ..models import Group, Post, User, Comment, Follow
 
-translation.activate("en")
 
-
+@override_settings(LANGUAGE_CODE='en-US', LANGUAGES=(('en', 'English'),))
 class PostModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -22,9 +21,9 @@ class PostModelTest(TestCase):
 
     def test_models_verbose_names(self):
         verbose_names_dict = {
-            "text": "Текст",
+            "text": "Text",
             "group": "Group",
-            "image": "Изображение",
+            "image": "Image",
         }
         for label, verbose_name in verbose_names_dict.items():
             with self.subTest(label=label):
@@ -42,6 +41,7 @@ class PostModelTest(TestCase):
                 self.assertEqual(response, help_text)
 
 
+@override_settings(LANGUAGE_CODE='en-US', LANGUAGES=(('en', 'English'),))
 class GroupModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -79,6 +79,7 @@ class GroupModelTest(TestCase):
                 self.assertEqual(response, help_text)
 
 
+@override_settings(LANGUAGE_CODE='en-US', LANGUAGES=(('en', 'English'),))
 class CommentModelTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -102,7 +103,7 @@ class CommentModelTest(TestCase):
         verbose_names_dict = {
             "post": "Post",
             "author": "Author",
-            "text": "Текст",
+            "text": "Text",
         }
         for label, verbose_name in verbose_names_dict.items():
             with self.subTest(label=label):
@@ -129,10 +130,10 @@ class FollowModelTest(TestCase):
         cls.AUTHOR_USERNAME = "author"
         cls.SUBSCRIBER_USERNAME = "sub"
 
-        cls.user_author = User.objects.create_user(
-            username=cls.AUTHOR_USERNAME)
-        cls.user_sub = User.objects.create_user(
-            username=cls.SUBSCRIBER_USERNAME)
+        cls.user_author = User.objects.create_user(username=cls.
+                                                   AUTHOR_USERNAME)
+        cls.user_sub = User.objects.create_user(username=cls.
+                                                SUBSCRIBER_USERNAME)
 
     def test_model_creation(self):
         Follow.objects.create(
@@ -140,5 +141,14 @@ class FollowModelTest(TestCase):
             user=self.user_sub,
         )
         follow = Follow.objects.first()
-        self.assertEqual(follow.author.username, self.AUTHOR_USERNAME)
-        self.assertEqual(follow.user.username, self.SUBSCRIBER_USERNAME)
+        self.assertEqual(
+            str(follow),
+            f"{self.SUBSCRIBER_USERNAME} subscribed to {self.AUTHOR_USERNAME}"
+        )
+
+        # проверяем, что нельзя подписаться на себя самого
+        with self.assertRaises(IntegrityError):
+            Follow.objects.create(
+                author=self.user_author,
+                user=self.user_author,
+            )

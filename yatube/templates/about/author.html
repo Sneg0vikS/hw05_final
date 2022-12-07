@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}<title>Об авторе проекта</title>{% endblock %}
+{% load static %}
+{% block title %}Об авторе проекта{% endblock %}
 {% block content %}
 <div class="container py-5"> 
 <h3>Привет Всем! Меня зовут Саня, я автор этого сайта!</h3>
@@ -7,11 +8,12 @@
     Меня зовут Саня, я проживаю в тёплом городе Краснодар!
     Мои проекты на данный момент, можно посмотреть тут:
     <a href="https://github.com/Sneg0vikS" target="_blank">Github</a>
-    <img src="D:\Dev\hw03_forms\yatube\templates\about\images\TjmWoxendqk.jpg" 
+    <img src="{% static "img/TjmWoxendqk.jpg" %}"
         hspace="300px"  
         vspace="50px"
         alt="Вот впринципе я"
         width="290"
         height="350">
 </p>
-{% endblock %} 
+</div>
+{% endblock %}

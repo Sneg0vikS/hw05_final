@@ -1,11 +1,9 @@
 from django.test import Client, TestCase
 from django.urls import reverse
-from django.utils import timezone
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from ..forms import CommentForm, PostForm
 from ..models import Post, Group, User, Comment
-
 
 COMMENT_TEXT = "Тестовый комментарий"
 POST_TEXT = "Тестовый пост"
@@ -14,7 +12,7 @@ EDITED = " - редактированный"
 TEST_DESCRIPTION = "Тестовое описание"
 USERNAME = "auth"
 
-INDEX_PAGE = "/index/"
+INDEX_PAGE = reverse("posts:index")
 PROFILE_URL = reverse("posts:profile", args=(USERNAME,))
 POST_CREATE_URL = reverse("posts:post_create")
 
@@ -64,11 +62,10 @@ class FormsTests(TestCase):
 
     def test_create_post(self):
         """Валидная форма создает запись в Post."""
-        posts_count = Post.objects.count()
-        time_before_test = timezone.now()
+        Post.objects.all().delete()
 
         form_data = {
-            "text": POST_TEXT,
+            "text": POST_TEXT + " new",
             "group": self.group.pk,
             "image": self.uploaded.open(),
         }
@@ -81,30 +78,28 @@ class FormsTests(TestCase):
             response,
             PROFILE_URL,
         )
-        # Проверяем, увеличилось ли число постов
-        self.assertEqual(Post.objects.count(), posts_count + 1)
-        # Проверяем, что создалась одна запись с заданными пааметрами
-        new_posts = Post.objects.filter(
+        # Проверяем, что в таблице только один пост
+        self.assertEqual(Post.objects.count(), 1)
+
+        # Проверяем, что создалась запись с заданными параметрами
+        new_post = Post.objects.get(
             text=form_data["text"],
             group__pk=form_data["group"],
             author=self.user,
-            pub_date__gt=time_before_test,
         )
-        self.assertTrue(new_posts.exists())
-        self.assertEqual(new_posts.count(), 1)
 
         # проверяем картинку
         self.assertEqual(
-            new_posts.first().image.open().read(),
-            form_data["image"].open().read()
+            new_post.image.open().read(), form_data["image"].open().read()
         )
-
         self.assertEqual(response.status_code, 200)
 
     def test_create_post_no_valid_form(self):
         """Не валидная форма не создает запись в Post."""
         form_data = {
             "text": "",
+            "group": self.group.pk,
+            "image": self.uploaded.open(),
         }
         self.authorized_client.post(POST_CREATE_URL, data=form_data,
                                     follow=True)
@@ -114,7 +109,7 @@ class FormsTests(TestCase):
         """Автор поста редактирует запись в Post."""
         form_data = {
             "text": POST_TEXT + EDITED,
-            "group": self.group.pk,
+            "group": self.group2.pk,
             "image": self.uploaded.open(),
         }
         response = self.authorized_client.post(
@@ -123,13 +118,9 @@ class FormsTests(TestCase):
             follow=True,
         )
         self.assertRedirects(response, self.POST_DETAIL_URL)
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data["text"],
-            ).exists()
-        )
-        self.assertEqual(Post.objects.get(pk=self.post.pk).text,
-                         form_data["text"])
+        post = Post.objects.get(pk=self.post.pk)
+        self.assertEqual(post.text, form_data["text"])
+        self.assertEqual(post.group.pk, form_data["group"])
 
     def test_post_edit_other_user(self):
         """Другой пользователь не может редактировать запись в Post."""
@@ -138,34 +129,16 @@ class FormsTests(TestCase):
             "group": self.group.pk,
             "image": self.uploaded.open(),
         }
-        # response = self.authorized_client2.post(
-        #    self.POST_EDIT_URL,
-        #    data=form_data,
-        #    follow=True,
-        # )
-        self.assertFalse(
-            Post.objects.filter(
-                text=form_data["text"],
-            ).exists()
-        )
-
-    def test_post_edit_group(self):
-        """Автор поста редактирует группу поста в Post."""
-        form_data = {"text": self.post.text, "group": self.group2.id}
-        response = self.authorized_client.post(
+        self.authorized_client2.post(
             self.POST_EDIT_URL,
             data=form_data,
             follow=True,
         )
-        self.assertRedirects(response, self.POST_DETAIL_URL)
-        self.assertTrue(
-            Post.objects.filter(
-                text=form_data["text"], group=form_data["group"]
-            ).exists()
-        )
+        edited_post = Post.objects.get(pk=self.post.pk)
+        self.assertEqual(self.post.text, edited_post.text)
 
     def test_create_post_no_authorized_client(self):
-        """Не авторизованный клиент не создает пост."""
+        """Неавторизованный клиент не создает пост."""
         form_data = {
             "text": POST_TEXT + NONAUTH,
             "group": self.group.pk,
@@ -176,22 +149,20 @@ class FormsTests(TestCase):
             data=form_data,
             follow=True,
         )
-        self.assertFalse(
-            Post.objects.filter(
+        with self.assertRaises(Post.DoesNotExist):
+            Post.objects.get(
                 text=form_data["text"],
-            ).exists()
-        )
+            )
 
     def test_post_create_page_show_correct_context(self):
-        """Правильная форма создания в контексте."""
-        response = self.authorized_client.get(POST_CREATE_URL)
-        self.assertIsInstance(response.context.get('form'), PostForm)
-
-    def test_post_edit_page_show_correct_context(self):
-        """Правильная форма редактирования в контексте."""
-        response = self.authorized_client.get(self.POST_EDIT_URL)
-        self.assertIsInstance(response.context.get('form'), PostForm)
-        self.assertEqual(response.context.get('form').instance, self.post)
+        """Правильная форма создания редактирования в контексте."""
+        urls = (POST_CREATE_URL, self.POST_EDIT_URL)
+        for url in urls:
+            response = self.authorized_client.get(url)
+            self.assertIsInstance(response.context.get('form'), PostForm)
+            if url == self.POST_EDIT_URL:
+                self.assertEqual(response.context.get('form').instance,
+                                 self.post)
 
 
 class CommentCreateFormTests(TestCase):
@@ -211,20 +182,8 @@ class CommentCreateFormTests(TestCase):
             "posts:post_detail", kwargs={"post_id": cls.post.pk}
         )
 
-    def test_create_comment_no_valid_form(self):
-        """Не валидная форма не создает коментарий."""
-        form_data = {
-            "text": "",
-        }
-        self.authorized_client.post(
-            self.COMMENT_ADD_URL,
-            data=form_data,
-            follow=True,
-        )
-        self.assertFalse(Comment.objects.exists())
-
     def test_create_comment_no_authorized_client(self):
-        """Не авторизованный клиент не создает коментарий."""
+        """Неавторизованный клиент не создает комментарий."""
         form_data = {
             "text": COMMENT_TEXT,
         }
@@ -234,6 +193,11 @@ class CommentCreateFormTests(TestCase):
             follow=True,
         )
         self.assertFalse(Comment.objects.exists())
+        with self.assertRaises(Comment.DoesNotExist):
+            Comment.objects.get(
+                text=form_data["text"],
+                post=self.post,
+            )
 
     def test_create_comment(self):
         """Валидная форма создает комментарий."""
@@ -246,7 +210,8 @@ class CommentCreateFormTests(TestCase):
             follow=True,
         )
         self.assertRedirects(response, self.POST_DETAIL_URL)
-        self.assertTrue(
-            Comment.objects.filter(post=self.post,
-                                   text=form_data["text"]).exists()
+        self.assertEqual(
+            Comment.objects.get(post=self.post, text=form_data["text"],
+                                author=self.user).text,
+            form_data["text"]
         )

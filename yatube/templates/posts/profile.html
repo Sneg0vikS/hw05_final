@@ -1,38 +1,39 @@
 {% extends "base.html" %}
 {% load thumbnail %}
-{% block title %}Профайл пользователя {{ username }}
+{% block title %}Профайл пользователя {{ user.username }}
 {% endblock %}
 {% block content %}
   <div class="container py-5"> 
     <h1>Все посты пользователя: {{ author.get_full_name }} </h1>
     <h4>Всего постов: {{ author.posts.count }}</h4>
-    <h4>Всего подписчиков: {{ author.following.count }}</h4>
-    <h4>Всего комментариев к постам: {{ user.comments.count }}</h4>
-    {% if user.is_authenticated and a %}
+    {% if user.is_authenticated and user == author %}
+      <h4>Всего подписчиков: {{ author.following.count }}</h4>
+    {% endif %}
 
+    {% if user.is_authenticated %}
+      {% if user != author %}
+        {% if following %}
+        <a
+          class="btn btn-lg btn-light"
+          href="{% url 'posts:profile_unfollow' author.username %}" role="button"
+        >
+          Отписаться
+        </a>
+        {% else %}
+        <a
+          class="btn btn-lg btn-primary"
+          href="{% url 'posts:profile_follow' author.username %}" role="button"
+        >
+          Подписаться
+        </a>
+        {% endif %}
+      {% endif %}
     {% else %}
       <p>Зарегестрируйтесь чтобы подписаться.</p>
     {% endif %}
-    {% if following %}
-      <a
-        class="btn btn-lg btn-light"
-        href="{% url 'posts:profile_unfollow' author.username %}" role="button"
-      >
-        Отписаться
-      </a>
-   {% else %}
-      <a
-        class="btn btn-lg btn-primary"
-        href="{% url 'posts:profile_follow' author.username %}" role="button"
-      >
-        Подписаться
-      </a>
-   {% endif %}
-    <article>
-      {% for post in page_obj %}
-        <li>
-          Дата публикации: {{ post.pub_date|date:"d E Y" }}
-        </li>
+    {% for post in page_obj %}
+      <article>
+        Дата публикации: {{ post.pub_date|date:"d E Y" }}
         {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
           <img class="card-img my-2" src="{{ im.url }}">
         {% endthumbnail %}
@@ -43,10 +44,10 @@
             <a href="{% url 'posts:group_list' post.group.slug %}">все записи группы: {{post.group.slug}} </a>
           {% endif %}
         </p>
-        <hr>
-      {% endfor %}
+      </article>
+      <hr>
+    {% endfor %}
       <!-- Остальные посты. После последнего нет черты -->
-      {% include 'includes/paginator.html' %} 
-    </article>
+      {% include 'includes/paginator.html' %}
   </div>
 {% endblock %}

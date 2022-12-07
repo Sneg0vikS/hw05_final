@@ -4,23 +4,18 @@ from django.urls import reverse
 
 class RoutesTests(TestCase):
     def test_urls_correctly_resolved(self):
-        self.assertEqual(reverse("posts:index"), "/")
-        self.assertEqual(reverse("posts:post_edit", args=[1]),
-                         "/posts/1/edit/")
-        self.assertEqual(reverse("posts:post_create"), "/create/")
-        self.assertEqual(reverse("posts:post_detail", args=[1]), "/posts/1/")
-        self.assertEqual(reverse("posts:profile", args=["username"]),
-                         "/profile/username/")
-        self.assertEqual(reverse("posts:add_comment", args=[1]),
-                         "/posts/1/comment/")
-        self.assertEqual(reverse("posts:group_list", args=["name"]),
-                         "/group/name/")
-        self.assertEqual(reverse("posts:follow_index"), "/follow/")
-        self.assertEqual(
-            reverse("posts:profile_follow", args=["username"]),
-            "/profile/username/follow/"
+        routes = (
+            ("index", "/", []),
+            ("post_edit", "/posts/1/edit/", [1]),
+            ("post_create", "/create/", []),
+            ("post_detail", "/posts/1/", [1]),
+            ("profile", "/profile/username/", ["username"]),
+            ("add_comment", "/posts/1/comment/", [1]),
+            ("group_list", "/group/name/", ["name"]),
+            ("follow_index", "/follow/", []),
+            ("profile_follow", "/profile/username/follow/", ["username"]),
+            ("profile_unfollow", "/profile/username/unfollow/", ["username"]),
         )
-        self.assertEqual(
-            reverse("posts:profile_unfollow", args=["username"]),
-            "/profile/username/unfollow/"
-        )
+        for name, url, args in routes:
+            with self.subTest(route=name):
+                self.assertEqual(reverse("posts:" + name, args=args), url)

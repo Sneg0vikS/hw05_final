@@ -16,13 +16,22 @@ SMALL_GIF = (
 )
 
 USERNAME = "auth"
+USERNAME2 = "auth2"
 GROUP_SLUG = "test-slug"
+GROUP2_SLUG = "test-slug-2"
 INDEX_URL = reverse("posts:index")
 PROFILE_URL = reverse("posts:profile", kwargs={"username": USERNAME})
 GROUP_URL = reverse("posts:group_list", kwargs={"slug": GROUP_SLUG})
+GROUP2_URL = reverse("posts:group_list", kwargs={"slug": GROUP2_SLUG})
 FOLLOW_INDEX_URL = reverse("posts:follow_index")
 POST_CREATE_URL = reverse("posts:post_create")
 GENERATE_POSTS_NUMBER = POSTS_PER_PAGE + 1
+FOLLOW_SECOND_USER_URL = reverse(
+    "posts:profile_follow", kwargs={"username": USERNAME2}
+)
+UNFOLLOW_SECOND_USER_URL = reverse(
+    "posts:profile_unfollow", kwargs={"username": USERNAME2}
+)
 
 
 class PostViewTests(TestCase):
@@ -40,7 +49,7 @@ class PostViewTests(TestCase):
         )
         cls.group2 = Group.objects.create(
             title="Тестовая группа #2",
-            slug=GROUP_SLUG + "-2",
+            slug=GROUP2_SLUG,
             description="Тестовое описание",
         )
         cls.post = Post.objects.create(
@@ -49,6 +58,8 @@ class PostViewTests(TestCase):
             group=cls.group,
             image=cls.uploaded,
         )
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.user)
         cls.authorized_client2 = Client()
         cls.authorized_client2.force_login(cls.user2)
 
@@ -57,13 +68,8 @@ class PostViewTests(TestCase):
         cls.POST_DETAIL_URL = reverse(
             "posts:post_detail", kwargs={"post_id": cls.post.pk}
         )
-        cls.GROUP2_URL = reverse("posts:group_list", args=[cls.group2.slug])
 
-    def setUp(self):
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-
-    def test_pages_show_correct_context(self):
+    def test_pages_show_correct_post(self):
         """Шаблоны index, group_list, profile сформированы с
          правильным контекстом."""
         url_list = (
@@ -77,26 +83,32 @@ class PostViewTests(TestCase):
             with self.subTest(url=url):
                 response = client.get(url)
                 page_obj = response.context.get("page_obj")
-                page_post = page_obj[0]
-                self.assertIn(self.post, page_obj)
-                self.assertEqual(self.post.pub_date, page_post.pub_date)
-                self.assertEqual(self.post.text, page_post.text)
-                self.assertEqual(self.post.image, page_post.image)
+                self.assertEqual(len(page_obj), 1)
+                post = page_obj[0]
+                self.assertEqual(self.post, post)
+                self.assertEqual(self.post.text, post.text)
+                self.assertEqual(self.post.group, post.group)
+                self.assertEqual(self.post.image, post.image)
 
     def test_post_detail_page_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
         response = self.authorized_client.get(self.POST_DETAIL_URL)
-        page_post = response.context.get("post")
-        self.assertEqual(self.post.pub_date, page_post.pub_date)
-        self.assertEqual(self.post.text, page_post.text)
-        self.assertEqual(self.post.image, page_post.image)
+        post = response.context.get("post")
+        self.assertEqual(self.post, post)
+        self.assertEqual(self.post.text, post.text)
+        self.assertEqual(self.post.group, post.group)
+        self.assertEqual(self.post.image, post.image)
 
-    def test_check_post_not_in_mistake_group_list_page(self):
+    def test_check_post_not_in_mistake_page(self):
         """Проверка созданного Поста группы, чтоб не попал в чужую группу."""
-        response = self.authorized_client.get(GROUP_URL)
-        self.assertIn(self.post, response.context["page_obj"])
-        response_2 = self.authorized_client.get(self.GROUP2_URL)
-        self.assertNotIn(self.post, response_2.context["page_obj"])
+        cases = (
+            (GROUP2_URL, self.authorized_client),
+            (FOLLOW_INDEX_URL, self.authorized_client2),
+        )
+        for url, client in cases:
+            with self.subTest(url=url):
+                response = client.get(url)
+                self.assertNotIn(self.post, response.context["page_obj"])
 
     def test_cache(self):
         """Тест по кэшу index"""
@@ -105,10 +117,24 @@ class PostViewTests(TestCase):
         post_1.text = "Текст для кэша"
         post_1.save()
         post_cache_2 = self.authorized_client.get(INDEX_URL)
-        self.assertAlmostEqual(post_cache.content, post_cache_2.content)
+        self.assertEqual(post_cache.content, post_cache_2.content)
         cache.clear()
         post_cache_3 = self.authorized_client.get(INDEX_URL)
         self.assertNotEqual(post_cache.content, post_cache_3.content)
+
+    def test_author_in_profile_context(self):
+        """Шаблон profile сформирован с правильным контекстом."""
+        self.assertEqual(self.user,
+                         self.authorized_client.get(PROFILE_URL)
+                         .context.get("author"))
+
+    def test_group_in_group_list(self):
+        """Шаблон group_list сформирован с правильным контекстом."""
+        response = self.authorized_client.get(GROUP_URL)
+        group = response.context.get("group")
+        self.assertEqual(self.group.title, group.title)
+        self.assertEqual(self.group.description, group.description)
+        self.assertEqual(self.group.slug, group.slug)
 
 
 class PaginatorViewsTest(TestCase):
@@ -125,14 +151,14 @@ class PaginatorViewsTest(TestCase):
             description="Тестовое описание",
         )
         Post.objects.bulk_create(
-            [
+            (
                 Post(
                     author=cls.user,
                     group=Group.objects.get(title="Тестовая группа"),
                     text="Текст",
                 )
                 for _ in range(GENERATE_POSTS_NUMBER)
-            ]
+            )
         )
 
         cls.authorized_client = Client()
@@ -142,54 +168,43 @@ class PaginatorViewsTest(TestCase):
 
     def test_pages_contain_required_records(self):
         pages_names = (
-            (INDEX_URL, self.authorized_client),
-            (GROUP_URL, self.authorized_client),
-            (PROFILE_URL, self.authorized_client),
-            (FOLLOW_INDEX_URL, self.authorized_client2),
+            (INDEX_URL, self.authorized_client, POSTS_PER_PAGE),
+            (GROUP_URL, self.authorized_client, POSTS_PER_PAGE),
+            (PROFILE_URL, self.authorized_client, POSTS_PER_PAGE),
+            (FOLLOW_INDEX_URL, self.authorized_client2, POSTS_PER_PAGE),
+            (INDEX_URL + "?page=2", self.authorized_client,
+             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
+            (GROUP_URL + "?page=2", self.authorized_client,
+             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
+            (PROFILE_URL + "?page=2", self.authorized_client,
+             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
+            (FOLLOW_INDEX_URL + "?page=2", self.authorized_client2,
+             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
         )
         Follow.objects.create(user=self.user2, author=self.user)
-        for url, client in pages_names:
+        for url, client, posts_number in pages_names:
             with self.subTest(url=url):
                 response = client.get(url)
                 self.assertEqual(response.status_code, 200)
-                # Проверка: количество постов на первой странице равно 10.
                 self.assertEqual(len(response.context["page_obj"]),
-                                 POSTS_PER_PAGE)
-                # Проверка: на второй странице должен быть один пост.
-                response = client.get(url + "?page=2")
-                self.assertEqual(
-                    len(response.context["page_obj"]),
-                    GENERATE_POSTS_NUMBER - POSTS_PER_PAGE,
-                )
+                                 posts_number)
 
 
 class FollowViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.first_user = User.objects.create_user(username="first_user")
-        cls.second_user = User.objects.create_user(username="second_user")
-        cls.third_user = User.objects.create_user(username="third_user")
+        cls.first_user = User.objects.create_user(username=USERNAME)
+        cls.second_user = User.objects.create_user(username=USERNAME2)
         cls.post = Post.objects.create(text="Тестовый пост",
                                        author=cls.second_user)
 
         cls.authorized_client_1 = Client()
-        cls.authorized_client_2 = Client()
-        cls.authorized_client_3 = Client()
         cls.authorized_client_1.force_login(cls.first_user)
-        cls.authorized_client_2.force_login(cls.second_user)
-        cls.authorized_client_3.force_login(cls.third_user)
-
-        cls.FOLLOW_SECOND_USER_URL = reverse(
-            "posts:profile_follow", kwargs={"username": cls.second_user}
-        )
-        cls.UNFOLLOW_SECOND_USER_URL = reverse(
-            "posts:profile_unfollow", kwargs={"username": cls.second_user}
-        )
 
     def test_subscribe_to_other_users(self):
         """Авторизованный пользователь может подписаться на автора."""
-        self.authorized_client_1.get(self.FOLLOW_SECOND_USER_URL)
+        self.authorized_client_1.get(FOLLOW_SECOND_USER_URL)
         self.assertTrue(
             Follow.objects.filter(
                 author=self.second_user, user=self.first_user
@@ -199,26 +214,9 @@ class FollowViewsTest(TestCase):
     def test_unsubscribe_from_other_users(self):
         """Авторизованный пользователь может отписаться от автора."""
         Follow.objects.create(author=self.second_user, user=self.first_user)
-        self.authorized_client_1.get(self.UNFOLLOW_SECOND_USER_URL)
+        self.authorized_client_1.get(UNFOLLOW_SECOND_USER_URL)
         self.assertFalse(
             Follow.objects.filter(
                 author=self.second_user, user=self.first_user
             ).exists()
         )
-
-    def test_subscribe_to_other_users_not_authorized_client(self):
-        """Неавторизованный пользователь не может подписаться на
-        автора поста."""
-        self.client.get(self.FOLLOW_SECOND_USER_URL)
-        self.assertFalse(self.second_user.following.filter(
-            user=self.first_user).exists())
-
-    def test_follow_index(self):
-        """Новая запись пользователя появляется в ленте тех,
-        кто на него подписан и не появляется в ленте тех, кто не подписан."""
-
-        self.authorized_client_1.get(self.FOLLOW_SECOND_USER_URL)
-        response_1 = self.authorized_client_1.get(FOLLOW_INDEX_URL)
-        self.assertIn(self.post, response_1.context["page_obj"])
-        response_3 = self.authorized_client_3.get(FOLLOW_INDEX_URL)
-        self.assertNotIn(self.post, response_3.context["page_obj"])
