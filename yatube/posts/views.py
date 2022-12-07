@@ -39,6 +39,7 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     following = (
         request.user.is_authenticated
+        and request.user != author
         and request.user.follower.filter(author=author).exists()
     )
     post_list = author.posts.all()
@@ -128,6 +129,9 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     """Отписка"""
-    get_object_or_404(Follow, user=request.user,
-                      author__username=username).delete()
+    try:
+        Follow.objects.get(user=request.user,
+                           author__username=username).delete()
+    except Follow.DoesNotExist:
+        pass
     return redirect("posts:profile", username=username)

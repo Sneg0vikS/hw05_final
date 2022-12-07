@@ -25,7 +25,7 @@ GROUP_URL = reverse("posts:group_list", kwargs={"slug": GROUP_SLUG})
 GROUP2_URL = reverse("posts:group_list", kwargs={"slug": GROUP2_SLUG})
 FOLLOW_INDEX_URL = reverse("posts:follow_index")
 POST_CREATE_URL = reverse("posts:post_create")
-GENERATE_POSTS_NUMBER = POSTS_PER_PAGE + 1
+POSTS_PER_PAGE2 = 1
 FOLLOW_SECOND_USER_URL = reverse(
     "posts:profile_follow", kwargs={"username": USERNAME2}
 )
@@ -70,34 +70,29 @@ class PostViewTests(TestCase):
         )
 
     def test_pages_show_correct_post(self):
-        """Шаблоны index, group_list, profile сформированы с
-         правильным контекстом."""
+        """Шаблоны, содержащие пост сформированы с правильными полями поста."""
         url_list = (
-            (INDEX_URL, self.authorized_client),
-            (GROUP_URL, self.authorized_client),
-            (PROFILE_URL, self.authorized_client),
-            (FOLLOW_INDEX_URL, self.authorized_client2),
+            (INDEX_URL, self.authorized_client, True),
+            (GROUP_URL, self.authorized_client, True),
+            (PROFILE_URL, self.authorized_client, True),
+            (FOLLOW_INDEX_URL, self.authorized_client2, True),
+            (self.POST_DETAIL_URL, self.authorized_client, False)
         )
         Follow.objects.create(user=self.user2, author=self.user)
-        for url, client in url_list:
+        for url, client, with_paginator in url_list:
             with self.subTest(url=url):
                 response = client.get(url)
-                page_obj = response.context.get("page_obj")
-                self.assertEqual(len(page_obj), 1)
-                post = page_obj[0]
+                if with_paginator:
+                    page_obj = response.context.get("page_obj")
+                    self.assertEqual(len(page_obj), 1)
+                    post = page_obj[0]
+                else:
+                    post = response.context.get("post")
                 self.assertEqual(self.post, post)
                 self.assertEqual(self.post.text, post.text)
                 self.assertEqual(self.post.group, post.group)
                 self.assertEqual(self.post.image, post.image)
-
-    def test_post_detail_page_show_correct_context(self):
-        """Шаблон post_detail сформирован с правильным контекстом."""
-        response = self.authorized_client.get(self.POST_DETAIL_URL)
-        post = response.context.get("post")
-        self.assertEqual(self.post, post)
-        self.assertEqual(self.post.text, post.text)
-        self.assertEqual(self.post.group, post.group)
-        self.assertEqual(self.post.image, post.image)
+                self.assertEqual(self.post.author, post.author)
 
     def test_check_post_not_in_mistake_page(self):
         """Проверка созданного Поста группы, чтоб не попал в чужую группу."""
@@ -124,14 +119,14 @@ class PostViewTests(TestCase):
 
     def test_author_in_profile_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
-        self.assertEqual(self.user,
-                         self.authorized_client.get(PROFILE_URL)
-                         .context.get("author"))
+        self.assertEqual(self.user, self.authorized_client.get(PROFILE_URL).
+                         context.get("author"))
 
     def test_group_in_group_list(self):
         """Шаблон group_list сформирован с правильным контекстом."""
         response = self.authorized_client.get(GROUP_URL)
         group = response.context.get("group")
+        self.assertEqual(self.group, group)
         self.assertEqual(self.group.title, group.title)
         self.assertEqual(self.group.description, group.description)
         self.assertEqual(self.group.slug, group.slug)
@@ -157,7 +152,7 @@ class PaginatorViewsTest(TestCase):
                     group=Group.objects.get(title="Тестовая группа"),
                     text="Текст",
                 )
-                for _ in range(GENERATE_POSTS_NUMBER)
+                for _ in range(POSTS_PER_PAGE + POSTS_PER_PAGE2)
             )
         )
 
@@ -172,20 +167,16 @@ class PaginatorViewsTest(TestCase):
             (GROUP_URL, self.authorized_client, POSTS_PER_PAGE),
             (PROFILE_URL, self.authorized_client, POSTS_PER_PAGE),
             (FOLLOW_INDEX_URL, self.authorized_client2, POSTS_PER_PAGE),
-            (INDEX_URL + "?page=2", self.authorized_client,
-             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
-            (GROUP_URL + "?page=2", self.authorized_client,
-             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
-            (PROFILE_URL + "?page=2", self.authorized_client,
-             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
+            (INDEX_URL + "?page=2", self.authorized_client, POSTS_PER_PAGE2),
+            (GROUP_URL + "?page=2", self.authorized_client, POSTS_PER_PAGE2),
+            (PROFILE_URL + "?page=2", self.authorized_client, POSTS_PER_PAGE2),
             (FOLLOW_INDEX_URL + "?page=2", self.authorized_client2,
-             GENERATE_POSTS_NUMBER - POSTS_PER_PAGE),
+             POSTS_PER_PAGE2),
         )
         Follow.objects.create(user=self.user2, author=self.user)
         for url, client, posts_number in pages_names:
             with self.subTest(url=url):
                 response = client.get(url)
-                self.assertEqual(response.status_code, 200)
                 self.assertEqual(len(response.context["page_obj"]),
                                  posts_number)
 
@@ -196,8 +187,8 @@ class FollowViewsTest(TestCase):
         super().setUpClass()
         cls.first_user = User.objects.create_user(username=USERNAME)
         cls.second_user = User.objects.create_user(username=USERNAME2)
-        cls.post = Post.objects.create(text="Тестовый пост",
-                                       author=cls.second_user)
+        cls.post = Post.objects.create(text="Тестовый пост", author=cls.
+                                       second_user)
 
         cls.authorized_client_1 = Client()
         cls.authorized_client_1.force_login(cls.first_user)

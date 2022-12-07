@@ -42,13 +42,15 @@ class PostURLTests(TestCase):
         cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
 
     def test_urls_access(self):
-        """Страницы доступные всем пользователям"""
+        """Страницы доступны пользователям"""
         url_cases = (
             (INDEX_URL, self.client, HTTPStatus.OK),
             (GROUP_SLUG_URL, self.client, HTTPStatus.OK),
             (PROFILE_URL, self.client, HTTPStatus.OK),
             (self.POST_URL, self.client, HTTPStatus.OK),
             (CREATE_URL, self.authorized_client, HTTPStatus.OK),
+            (self.POST_EDIT_URL, self.authorized_client, HTTPStatus.OK),
+            (FOLLOW_INDEX_URL, self.authorized_client, HTTPStatus.OK),
             ("/nonexistent_page/", self.client, HTTPStatus.NOT_FOUND)
         )
         for url, client, status in url_cases:
@@ -74,9 +76,11 @@ class PostURLTests(TestCase):
             (self.POST_EDIT_URL, self.POST_URL, self.authorized_client2),
             (FOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client2),
             (UNFOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client2),
+            (FOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client),
+            (UNFOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client),
         )
         for url, redirect_url, client in test_redirects:
-            with self.subTest(url=url):
+            with self.subTest(url=url, client=client):
                 self.assertRedirects(client.get(url), redirect_url)
 
     def test_post_urls_uses_correct_template(self):

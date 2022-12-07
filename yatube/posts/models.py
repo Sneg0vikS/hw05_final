@@ -54,7 +54,7 @@ class Post(models.Model):
         return self.text[:15]
 
     def str_author(self) -> str:
-        return str(self.author)
+        return self.author.get_full_name()
 
 
 class Comment(models.Model):
@@ -99,7 +99,7 @@ class Follow(models.Model):
     )
 
     def __str__(self):
-        return f"{self.user} subscribed to {self.author}"
+        return f"{self.user.username} subscribed to {self.author.username}"
 
     class Meta:
         verbose_name = _("Following")
