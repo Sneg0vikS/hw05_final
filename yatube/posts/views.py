@@ -107,13 +107,9 @@ def add_comment(request, post_id):
 @login_required
 def follow_index(request):
     """Отображение постов фоловера"""
-    title = "123"
     posts = Post.objects.filter(author__following__user=request.user)
     page_obj = paginator_page(request, posts)
-    context = {
-        "page_obj": page_obj,
-        "title": title,
-    }
+    context = {"page_obj": page_obj}
     return render(request, "posts/follow.html", context)
 
 
@@ -129,9 +125,6 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     """Отписка"""
-    try:
-        Follow.objects.get(user=request.user,
-                           author__username=username).delete()
-    except Follow.DoesNotExist:
-        pass
+    get_object_or_404(Follow, user=request.user,
+                      author__username=username).delete()
     return redirect("posts:profile", username=username)

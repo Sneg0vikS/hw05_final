@@ -63,8 +63,8 @@ class PostViewTests(TestCase):
         cls.authorized_client2 = Client()
         cls.authorized_client2.force_login(cls.user2)
 
-        cls.POST_EDIT_URL = reverse("posts:post_edit", kwargs={"post_id":
-                                                               cls.post.pk})
+        cls.POST_EDIT_URL = reverse("posts:post_edit",
+                                    kwargs={"post_id": cls.post.pk})
         cls.POST_DETAIL_URL = reverse(
             "posts:post_detail", kwargs={"post_id": cls.post.pk}
         )
@@ -187,8 +187,8 @@ class FollowViewsTest(TestCase):
         super().setUpClass()
         cls.first_user = User.objects.create_user(username=USERNAME)
         cls.second_user = User.objects.create_user(username=USERNAME2)
-        cls.post = Post.objects.create(text="Тестовый пост", author=cls.
-                                       second_user)
+        cls.post = Post.objects.create(text="Тестовый пост",
+                                       author=cls.second_user)
 
         cls.authorized_client_1 = Client()
         cls.authorized_client_1.force_login(cls.first_user)

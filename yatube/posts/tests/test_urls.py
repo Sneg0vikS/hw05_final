@@ -12,10 +12,14 @@ NEXT = "?next="
 FOLLOW_INDEX_URL = reverse("posts:follow_index")
 GROUP_SLUG = "test-slug"
 GROUP_SLUG_URL = reverse("posts:group_list", args=[GROUP_SLUG])
+GROUP_WRONG_SLUG_URL = reverse("posts:group_list", args=["wrong"])
 USERNAME = "auth"
 PROFILE_URL = reverse("posts:profile", args=[USERNAME])
+PROFILE_WRONG_URL = reverse("posts:profile", args=["wrong"])
 FOLLOW_PROFILE_URL = reverse("posts:profile_follow", args=[USERNAME])
 UNFOLLOW_PROFILE_URL = reverse("posts:profile_unfollow", args=[USERNAME])
+POST_WRONG_URL = reverse("posts:post_detail", args=[99])
+POST_EDIT_WRONG_URL = reverse("posts:post_edit", args=[99])
 
 
 class PostURLTests(TestCase):
@@ -41,23 +45,37 @@ class PostURLTests(TestCase):
         cls.POST_URL = reverse("posts:post_detail", args=[cls.post.id])
         cls.POST_EDIT_URL = reverse("posts:post_edit", args=[cls.post.id])
 
-    def test_urls_access(self):
-        """Страницы доступны пользователям"""
+    def test_urls_response_correct_status(self):
+        """В ответах корректный код состояния"""
         url_cases = (
             (INDEX_URL, self.client, HTTPStatus.OK),
             (GROUP_SLUG_URL, self.client, HTTPStatus.OK),
+            (GROUP_WRONG_SLUG_URL, self.client, HTTPStatus.NOT_FOUND),
             (PROFILE_URL, self.client, HTTPStatus.OK),
+            (PROFILE_WRONG_URL, self.client, HTTPStatus.NOT_FOUND),
             (self.POST_URL, self.client, HTTPStatus.OK),
+            (POST_WRONG_URL, self.client, HTTPStatus.NOT_FOUND),
             (CREATE_URL, self.authorized_client, HTTPStatus.OK),
             (self.POST_EDIT_URL, self.authorized_client, HTTPStatus.OK),
+            (POST_EDIT_WRONG_URL, self.authorized_client,
+             HTTPStatus.NOT_FOUND),
             (FOLLOW_INDEX_URL, self.authorized_client, HTTPStatus.OK),
-            ("/nonexistent_page/", self.client, HTTPStatus.NOT_FOUND)
+            ("/nonexistent_page/", self.client, HTTPStatus.NOT_FOUND),
+
+            (CREATE_URL, self.client, HTTPStatus.FOUND),
+            (self.POST_EDIT_URL, self.client, HTTPStatus.FOUND),
+            (FOLLOW_INDEX_URL, self.client, HTTPStatus.FOUND),
+            (FOLLOW_PROFILE_URL, self.client, HTTPStatus.FOUND),
+            (UNFOLLOW_PROFILE_URL, self.client, HTTPStatus.FOUND),
+            (self.POST_EDIT_URL, self.authorized_client2, HTTPStatus.FOUND),
+            (FOLLOW_PROFILE_URL, self.authorized_client2, HTTPStatus.FOUND),
+            (UNFOLLOW_PROFILE_URL, self.authorized_client2, HTTPStatus.FOUND),
+            (FOLLOW_PROFILE_URL, self.authorized_client, HTTPStatus.FOUND),
         )
         for url, client, status in url_cases:
             with self.subTest(url=url):
-                response = client.get(url)
                 self.assertEqual(
-                    response.status_code,
+                    client.get(url).status_code,
                     status,
                 )
 
@@ -77,7 +95,6 @@ class PostURLTests(TestCase):
             (FOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client2),
             (UNFOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client2),
             (FOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client),
-            (UNFOLLOW_PROFILE_URL, PROFILE_URL, self.authorized_client),
         )
         for url, redirect_url, client in test_redirects:
             with self.subTest(url=url, client=client):

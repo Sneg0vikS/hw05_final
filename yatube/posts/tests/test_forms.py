@@ -134,7 +134,7 @@ class FormsTests(TestCase):
         clients = (self.authorized_client2, self.client)
         for client in clients:
             with self.subTest(cient=client):
-                self.client.post(
+                client.post(
                     self.POST_EDIT_URL,
                     data=form_data,
                     follow=True,
@@ -146,6 +146,13 @@ class FormsTests(TestCase):
                 self.assertEqual(
                     post.image.open().read(), self.post.image.open().read()
                 )
+
+        response = self.authorized_client2.post(
+            self.POST_EDIT_URL,
+            data=form_data,
+            follow=True,
+        )
+        self.assertRedirects(response, self.POST_DETAIL_URL)
 
 
 class CommentCreateFormTests(TestCase):
